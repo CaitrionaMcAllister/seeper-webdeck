@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How we pitch now: building on-brand webdeck presentations with Claude, GitHub and Vercel. A Seeper guide.">
+<meta name="theme-color" content="#000000">
+<title>How We Pitch Now</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23FF4C5E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&family=Inter:wght@200;300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Seeper brand world: Eclipse black, Crystal white, accent coral. Special Gothic Expanded One for display,
+   Inter for body, IBM Plex Mono for labels. Full-screen slides snap on desktop, scroll freely on phones. */
+:root{
+  --black:#000000;
+  --twilight:#222222;
+  --steel:#626262;
+  --mist:#C3C3C3;
+  --white:#FFFFFF;
+  --coral:#FF4C5E;
+  --coral-deep:#E8394B;
+  --rule-dark:rgba(255,255,255,.22);
+  --rule-light:rgba(0,0,0,.2);
+  --muted-dark:rgba(255,255,255,.68);
+  --muted-light:rgba(0,0,0,.6);
+  --display:"Special Gothic Expanded One","Arial Black","Helvetica Neue",Arial,sans-serif;
+  --body:"Inter","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --gutter:clamp(16px,5vw,80px);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (min-width:900px) and (min-height:620px){html{scroll-snap-type:y mandatory}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--black);color:var(--white);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%}
+[hidden]{display:none!important}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--coral);outline-offset:3px}
+.coral :focus-visible{outline-color:var(--white)}
+
+/* ---------- chrome ---------- */
+.bar{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding-block:14px;padding-left:max(var(--gutter),env(safe-area-inset-left,0px));padding-right:max(var(--gutter),env(safe-area-inset-right,0px));
+  color:var(--white);transition:color .3s;pointer-events:none}
+.bar>*{pointer-events:auto}
+body[data-tone="light"] .bar{color:var(--black)}
+.wordmark{display:block;height:15px;width:auto;transition:filter .3s}
+body[data-tone="light"] .wordmark{filter:invert(1)}
+.bar-right{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.counter{font-variant-numeric:tabular-nums;opacity:.85}
+.btn{font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:999px;padding:6px 12px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase}
+.btn[aria-pressed="true"]{background:currentColor}
+.btn[aria-pressed="true"] span{color:var(--black)}
+body[data-tone="light"] .btn[aria-pressed="true"] span{color:var(--white)}
+body[data-tone="coral"] .btn[aria-pressed="true"] span{color:var(--coral)}
+.progress{position:fixed;left:0;top:env(safe-area-inset-top,0px);height:3px;background:var(--coral);z-index:55;width:0;transition:width .35s ease}
+body[data-tone="coral"] .progress{background:var(--white)}
+
+.pager{position:fixed;z-index:50;right:max(var(--gutter),env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
+.pager button{width:44px;height:44px;border-radius:50%;border:1px solid currentColor;background:transparent;color:var(--white);cursor:pointer;display:grid;place-items:center;font-size:18px;transition:color .3s,opacity .2s}
+body[data-tone="light"] .pager button{color:var(--black)}
+.pager button:disabled{opacity:.25;cursor:default}
+
+.notes{position:fixed;z-index:70;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:min(460px,calc(100vw - 32px));
+  max-height:min(52vh,420px);overflow:auto;background:rgba(10,10,10,.95);color:var(--white);border:1px solid var(--rule-dark);border-radius:14px;padding:18px 20px;
+  backdrop-filter:blur(10px);box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.notes h2{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--coral);margin:0 0 10px}
+.notes p{margin:0 0 .7em;font-size:15px;line-height:1.55}
+.notes .hint{font-family:var(--mono);font-size:11px;color:var(--muted-dark);margin-top:12px}
+
+/* ---------- slides ---------- */
+.slide{position:relative;min-height:100svh;scroll-snap-align:start;display:flex;flex-direction:column;overflow:hidden;isolation:isolate;
+  padding-block:calc(64px + env(safe-area-inset-top,0px)) 84px;padding-left:max(var(--gutter),env(safe-area-inset-left,0px));padding-right:max(var(--gutter),env(safe-area-inset-right,0px))}
+.slide.dark{background:var(--black);color:var(--white)}
+.slide.coral{background:var(--coral);color:var(--white)}
+.slide.light{background:var(--white);color:var(--black)}
+.inner{width:100%;max-width:1320px;margin-inline:auto;flex:1;display:flex;flex-direction:column;justify-content:center;gap:clamp(20px,3.2vh,40px);min-width:0;position:relative}
+
+/* registration crosshairs, from the Hello Deck */
+.marks{position:absolute;inset:clamp(14px,2.2vw,30px);pointer-events:none;z-index:0}
+.marks i{position:absolute;width:16px;height:16px}
+.marks i::before,.marks i::after{content:"";position:absolute;background:currentColor;opacity:.55}
+.marks i::before{left:7.5px;top:0;width:1px;height:16px}
+.marks i::after{top:7.5px;left:0;height:1px;width:16px}
+.marks i:nth-child(1){left:0;top:0}.marks i:nth-child(2){right:0;top:0}.marks i:nth-child(3){left:0;bottom:0}.marks i:nth-child(4){right:0;bottom:0}
+@media (max-width:600px){.marks{display:none}}
+
+.eyebrow{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--rule-dark);font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.light .eyebrow{border-color:var(--rule-light)}
+.coral .eyebrow{border-color:rgba(255,255,255,.45)}
+.step-no{color:var(--coral)}
+.coral .step-no{color:var(--white)}
+
+.h-xl,.h-l,.h-m{font-family:var(--display);font-weight:400;text-transform:uppercase;line-height:.95;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.h-xl{font-size:clamp(3rem,11vw,10.5rem)}
+.h-l{font-size:clamp(2.1rem,5.6vw,5.4rem)}
+.h-m{font-size:clamp(1.25rem,2.2vw,2rem);line-height:1.05}
+.thin{font-family:var(--body);font-weight:200;letter-spacing:.02em}
+.lede{font-size:clamp(1.05rem,1.45vw,1.28rem);line-height:1.5;max-width:58ch;margin:0;text-wrap:pretty}
+.muted{color:var(--muted-dark)}
+.light .muted{color:var(--muted-light)}
+.coral .muted{color:rgba(255,255,255,.85)}
+.accent{color:var(--coral)}
+.rule{border:0;border-top:1px solid var(--rule-dark);margin:0}
+.light .rule{border-color:var(--rule-light)}
+.tag{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+
+.bg{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover}
+.bg-fade{position:absolute;inset:0;z-index:-1;pointer-events:none}
+
+/* prompt boxes */
+.prompt{position:relative;background:#0d0d0d;color:var(--white);border:1px solid var(--rule-dark);border-radius:14px;padding:18px 20px 20px;min-width:0}
+.light .prompt{background:#111}
+.prompt-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-dark)}
+.prompt pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:clamp(12.5px,1vw,14px);line-height:1.6;color:#EDEDED;max-height:46vh;overflow:auto}
+.prompt pre b{color:var(--coral);font-weight:500}
+.copy{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;background:transparent;color:var(--white);border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:4px 10px;cursor:pointer}
+.copy:hover{background:var(--white);color:var(--black)}
+
+.seg{display:inline-flex;border:1px solid currentColor;border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;border:0;background:transparent;color:inherit;padding:8px 14px;border-radius:999px;cursor:pointer;opacity:.75}
+.seg button[aria-pressed="true"]{background:var(--coral);color:var(--white);opacity:1}
+.coral .seg button[aria-pressed="true"]{background:var(--white);color:var(--coral)}
+
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.checks li{display:flex;gap:12px;align-items:baseline}
+.checks li::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--coral);transform:translateY(-1px)}
+.coral .checks li::before{background:var(--white)}
+
+/* ---------- 1 title ---------- */
+#title .bg-fade{background:linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,0) 30%,rgba(0,0,0,.15) 70%,rgba(0,0,0,.6))}
+.title-wrap{flex:1;display:grid;place-items:center}
+.target{position:relative;width:clamp(280px,min(58vw,62vh),560px);aspect-ratio:1;display:grid;place-items:center;text-align:center}
+.target img{position:absolute;inset:0;width:100%;height:100%}
+.target .t-copy{display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.4vh,14px);padding:0 8%}
+.hello{font-family:var(--mono);font-size:clamp(10px,1vw,12.5px);letter-spacing:.16em;text-transform:uppercase}
+.t-thin{font-family:var(--body);font-weight:200;text-transform:uppercase;font-size:clamp(1.6rem,4.4vw,3.6rem);line-height:1;letter-spacing:.01em}
+.t-bold{font-family:var(--display);text-transform:uppercase;font-size:clamp(1.9rem,5.2vw,4.3rem);line-height:.95}
+.side{position:absolute;top:50%;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;writing-mode:vertical-rl;transform:translateY(-50%)}
+.side.l{left:0;transform:translateY(-50%) rotate(180deg)}.side.r{right:0}
+@media (max-width:700px){.side{display:none}}
+.title-foot{text-align:center;font-size:clamp(.95rem,1.2vw,1.1rem);margin:0;color:rgba(255,255,255,.88)}
+@media (prefers-reduced-motion:no-preference){
+  .target img{animation:spinIn 1.4s cubic-bezier(.2,.7,.1,1) both}
+  .t-copy{animation:fadeUp 1.2s .25s cubic-bezier(.2,.7,.1,1) both}
+  @keyframes spinIn{from{transform:rotate(-45deg) scale(.85);opacity:0}to{transform:none;opacity:1}}
+  @keyframes fadeUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+}
+
+/* ---------- 2 agenda ---------- */
+#agenda{padding:0;flex-direction:row}
+.ag-panel{flex:0 0 min(46%,640px);display:flex;flex-direction:column;justify-content:center;gap:28px;padding:calc(70px + env(safe-area-inset-top,0px)) clamp(20px,4vw,64px) 90px max(var(--gutter),env(safe-area-inset-left,0px));border-right:1px solid var(--rule-light);position:relative}
+.ag-img{flex:1;position:relative;min-height:100svh}
+.ag-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ag-img .side{color:var(--white);right:22px}
+.ag-list{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase}
+.ag-list li{display:grid;grid-template-columns:3.6em minmax(0,1fr) auto;gap:10px;padding:11px 0;border-bottom:1px solid var(--rule-light)}
+.ag-list a{text-decoration:none}
+.ag-list a:hover{color:var(--coral)}
+.ag-list .n{color:var(--muted-light)}
+.ag-list .m{color:var(--muted-light)}
+@media (max-width:860px){#agenda{flex-direction:column}.ag-panel{flex:none;border-right:0}.ag-img{min-height:38vh;flex:none}}
+
+/* ---------- 3 why (coral photo) ---------- */
+#why .bg{object-position:left center}
+.split-right{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center}
+.split-right>div:last-child{display:flex;flex-direction:column;gap:22px}
+.split-wide{grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr)}
+.split-left{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:40px;align-items:center}
+.split-left>div:first-child{display:flex;flex-direction:column;gap:22px;max-width:500px}
+@media (max-width:860px){
+  .split-right,.split-left,.split-wide{grid-template-columns:1fr}
+  .split-right>div:first-child,.split-left>div:last-child{display:none}
+  .coral .bg{opacity:.35}
+}
+
+/* ---------- 4 shift (before / after) ---------- */
+.shift-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:clamp(24px,4vw,64px);align-items:center}
+@media (max-width:900px){.shift-grid{grid-template-columns:1fr}}
+.desk{position:relative;aspect-ratio:16/10;border:1px solid var(--rule-dark);border-radius:14px;background:radial-gradient(ellipse at 50% 120%,#2a0d12,#0a0a0a 70%);overflow:hidden}
+@media (max-width:600px){.desk{aspect-ratio:4/3.6}}
+.file{position:absolute;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#1a1a1a;border:1px solid #333;font-family:var(--mono);font-size:clamp(10px,1vw,12.5px);white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.5);
+  transition:transform .8s cubic-bezier(.2,.7,.1,1),opacity .6s}
+.file .ext{font-size:10px;padding:2px 6px;border-radius:4px;background:#333;color:#ddd}
+.desk[data-mode="after"] .file{opacity:0;transform:translate(var(--tx),var(--ty)) scale(.6) rotate(0deg)!important}
+.live-link{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.8);opacity:0;transition:transform .8s cubic-bezier(.2,.7,.1,1) .15s,opacity .6s .15s;
+  display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+.desk[data-mode="after"] .live-link{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.url{display:flex;align-items:center;gap:10px;padding:14px 20px;border-radius:999px;background:var(--white);color:var(--black);font-family:var(--mono);font-size:clamp(12px,1.3vw,16px);box-shadow:0 0 0 8px rgba(255,76,94,.18),0 0 60px rgba(255,76,94,.45)}
+.dot{width:10px;height:10px;border-radius:50%;background:#18C964;flex:none;box-shadow:0 0 0 0 rgba(24,201,100,.6)}
+@media (prefers-reduced-motion:no-preference){.dot{animation:ping 1.8s infinite}@keyframes ping{0%{box-shadow:0 0 0 0 rgba(24,201,100,.55)}80%,100%{box-shadow:0 0 0 10px rgba(24,201,100,0)}}}
+.live-sub{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-dark)}
+.shift-list{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.shift-list li{display:grid;grid-template-columns:2.6em minmax(0,1fr);gap:10px;padding:14px 0;border-bottom:1px solid var(--rule-dark)}
+.shift-list li:first-child{border-top:1px solid var(--rule-dark)}
+.shift-list .n{font-family:var(--mono);font-size:12px;color:var(--coral);padding-top:3px}
+
+/* ---------- 5 workflow ---------- */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--rule-light)}
+@media (max-width:980px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.steps{grid-template-columns:1fr}}
+.step{position:relative;display:flex;flex-direction:column;gap:10px;padding:18px clamp(12px,1.6vw,22px) 22px;border-left:1px solid var(--rule-light);border-bottom:1px solid var(--rule-light);text-decoration:none;color:inherit;min-width:0;transition:background .25s,color .25s}
+.step::before{content:"";position:absolute;left:-4px;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--black)}
+.step:hover{background:var(--black);color:var(--white)}
+.step .k{font-family:var(--mono);font-size:12px;letter-spacing:.1em}
+.step h3{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(1rem,1.5vw,1.3rem);line-height:1.05}
+.step p{margin:0;font-size:.95rem;line-height:1.45;color:var(--muted-light)}
+.step:hover p{color:var(--muted-dark)}
+.step.soon{background:var(--coral);color:var(--white)}
+.step.soon p{color:rgba(255,255,255,.9)}
+.step.soon:hover{background:var(--coral-deep)}
+.pill{display:inline-block;align-self:flex-start;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;border:1px solid currentColor;border-radius:999px;padding:3px 8px}
+
+/* ---------- brief ---------- */
+.two{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(24px,4vw,64px);align-items:start}
+.two-a{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
+.two-b{grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr)}
+@media (max-width:940px){.two,.two-a,.two-b{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.note{font-size:.95rem;line-height:1.5;border-left:2px solid var(--coral);padding-left:14px;margin:0}
+.coral .note{border-color:var(--white)}
+
+/* ---------- brand ---------- */
+.specimen{display:grid;gap:0}
+.specimen div{display:grid;grid-template-columns:9.5em minmax(0,1fr);gap:16px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--rule-dark)}
+.specimen div:first-child{border-top:1px solid var(--rule-dark)}
+.specimen .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-dark)}
+.sp-d{font-family:var(--display);text-transform:uppercase;font-size:clamp(1.3rem,2.4vw,2.2rem);line-height:1}
+.sp-b{font-size:1.1rem}
+.sp-m{font-family:var(--mono);font-size:.95rem}
+@media (max-width:520px){.specimen div{grid-template-columns:1fr;gap:4px}}
+.swatches{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.swatches{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.sw{display:flex;flex-direction:column;gap:8px;min-width:0}
+.sw i{display:block;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
+.sw b{font-size:.82rem;font-weight:600;line-height:1.2}
+.sw span{font-family:var(--mono);font-size:10.5px;color:var(--muted-dark)}
+.sources{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.sources li{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--rule-dark);border-radius:999px;padding:6px 11px;color:var(--muted-dark)}
+
+/* ---------- connect ---------- */
+.cards2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,2vw,28px)}
+@media (max-width:820px){.cards2{grid-template-columns:1fr}}
+.card{border:1px solid var(--rule-light);border-radius:16px;padding:clamp(18px,2.4vw,30px);display:flex;flex-direction:column;gap:16px;min-width:0}
+.card-head{display:flex;align-items:center;gap:14px}
+.logo-dot{width:44px;height:44px;border-radius:50%;background:var(--black);color:var(--white);display:grid;place-items:center;flex:none}
+.logo-dot svg{width:22px;height:22px}
+.card ol{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:12px}
+.card ol li{counter-increment:s;display:grid;grid-template-columns:2.4em minmax(0,1fr);gap:8px}
+.card ol li::before{content:"[0" counter(s) "]";font-family:var(--mono);font-size:12px;color:var(--coral);padding-top:2px}
+.kbd{font-family:var(--mono);font-size:.88em;background:rgba(0,0,0,.06);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.once{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.once::before{content:"";width:28px;height:1px;background:currentColor}
+
+/* ---------- publish pipeline ---------- */
+.pipe{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,2vw,28px);padding-top:10px}
+.pipe-line{position:absolute;left:12.5%;right:12.5%;top:calc(10px + clamp(70px,9vw,120px)/2);height:1px;background:rgba(255,255,255,.3);z-index:0}
+.pulse{position:absolute;top:-4px;left:0;width:9px;height:9px;border-radius:50%;background:var(--coral);box-shadow:0 0 18px 4px rgba(255,76,94,.7)}
+@media (prefers-reduced-motion:no-preference){.pulse{animation:travel 3.2s cubic-bezier(.5,0,.5,1) infinite}@keyframes travel{0%{left:0;opacity:0}8%{opacity:1}92%{opacity:1}100%{left:100%;opacity:0}}}
+.node{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;min-width:0}
+.node .orb{width:clamp(70px,9vw,120px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:#111;border:1px solid rgba(255,255,255,.35)}
+.node .orb svg{width:38%;height:38%}
+.node.end .orb{background:var(--coral);border-color:var(--coral)}
+.node h3{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(.9rem,1.4vw,1.2rem)}
+.node p{margin:0;font-size:.95rem;color:var(--muted-dark);max-width:22ch}
+@media (max-width:760px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:28px}.pipe-line{display:none}}
+
+/* ---------- live edit demo ---------- */
+.browser{border:1px solid var(--rule-light);border-radius:14px;overflow:hidden;background:#000;box-shadow:0 30px 80px rgba(0,0,0,.18);min-width:0}
+.chrome{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#ececec;color:#333}
+.chrome .lights{display:flex;gap:6px}.chrome .lights i{width:10px;height:10px;border-radius:50%;background:#c9c9c9}
+.chrome .addr{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:5px 12px;font-family:var(--mono);font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mini{position:relative;aspect-ratio:16/9;background:#000 url(images/title.jpg) center/cover;display:grid;place-items:center;text-align:center;color:#fff;padding:6%}
+.mini::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.mini h4{position:relative;z-index:1;margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(1.1rem,3vw,2.6rem);line-height:1;text-wrap:balance;transition:opacity .3s}
+.mini .ver{position:absolute;z-index:1;left:12px;bottom:10px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+.status{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.status span{border:1px solid var(--rule-light);border-radius:999px;padding:5px 10px;color:var(--muted-light);transition:all .25s}
+.status span.on{border-color:var(--black);background:var(--black);color:var(--white)}
+.status span.done{border-color:#18C964;background:#18C964;color:#000}
+.edit-row{display:flex;gap:10px;flex-wrap:wrap}
+.edit-row input{flex:1;min-width:200px;font:inherit;font-size:1rem;padding:12px 16px;border-radius:999px;border:1px solid var(--rule-light);background:#fff;color:#000}
+.edit-row button{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;border:0;border-radius:999px;padding:12px 20px;background:var(--coral);color:#fff;cursor:pointer}
+.edit-row button:disabled{opacity:.5;cursor:default}
+
+/* ---------- collaborate ---------- */
+#together .bg{object-position:center}
+#together .bg-fade{background:linear-gradient(0deg,rgba(0,0,0,.92) 30%,rgba(0,0,0,.55) 65%,rgba(0,0,0,.25))}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(18px,3vw,44px)}
+@media (max-width:860px){.cols3{grid-template-columns:1fr}}
+.c3{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.4);min-width:0}
+.c3 .k{font-family:var(--mono);font-size:12px;color:var(--coral)}
+.c3 h3{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(1.05rem,1.6vw,1.4rem);line-height:1.05}
+.c3 p{margin:0;font-size:.98rem;line-height:1.5;color:var(--muted-dark)}
+
+/* ---------- noodle ---------- */
+#noodle .bg{opacity:.55}
+.noodle-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:clamp(24px,4vw,64px);align-items:center}
+@media (max-width:940px){.noodle-grid{grid-template-columns:1fr}}
+.soon-badge{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;background:var(--white);color:var(--coral);border-radius:999px;padding:7px 14px;font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase}
+.soon-badge i{width:8px;height:8px;border-radius:50%;background:var(--coral)}
+@media (prefers-reduced-motion:no-preference){.soon-badge i{animation:blink 1.2s steps(2) infinite}@keyframes blink{50%{opacity:.15}}}
+.loop{width:100%;max-width:520px;margin-inline:auto;aspect-ratio:1;display:block}
+.loop text{font-family:var(--display);text-transform:uppercase;fill:#fff}
+.loop .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;fill:rgba(255,255,255,.85)}
+@media (prefers-reduced-motion:no-preference){.loop .orbit{animation:orbit 18s linear infinite;transform-origin:260px 260px}@keyframes orbit{to{transform:rotate(360deg)}}}
+.benefits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0;padding:0;list-style:none}
+@media (max-width:560px){.benefits{grid-template-columns:1fr}}
+.benefits li{padding:14px 16px 14px 0;border-top:1px solid rgba(255,255,255,.45);display:flex;flex-direction:column;gap:4px}
+.benefits b{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(.9rem,1.25vw,1.08rem);line-height:1.1}
+.benefits span{font-size:.95rem;line-height:1.45;color:rgba(255,255,255,.92)}
+
+/* ---------- craft ---------- */
+.rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--rule-light)}
+@media (max-width:900px){.rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.rules{grid-template-columns:1fr}}
+.rules div{padding:18px clamp(12px,1.6vw,22px) 22px 0;border-bottom:1px solid var(--rule-light);display:flex;flex-direction:column;gap:8px;min-width:0}
+.rules .k{font-family:var(--mono);font-size:12px;color:var(--coral)}
+.rules h3{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(1rem,1.45vw,1.25rem);line-height:1.05}
+.rules p{margin:0;font-size:.97rem;color:var(--muted-light)}
+.glyph-band{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.glyph-band div{background:#000;border-radius:4px;aspect-ratio:3.4/1;display:grid;place-items:center;padding:8%}
+.glyph-band img{width:100%;height:100%;object-fit:contain}
+@media (max-width:700px){.glyph-band{display:none}}
+
+/* ---------- fluency ---------- */
+#fluency{background:#F94B5C!important}
+#fluency .bg{width:60%;object-fit:contain;object-position:right center;transform:scaleX(-1)}
+@media (max-width:860px){#fluency .bg{width:100%}}
+.levels{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.levels li{display:grid;grid-template-columns:5.5em minmax(0,1fr);gap:14px;padding:16px 0;border-top:1px solid rgba(255,255,255,.45)}
+.levels li:last-child{border-bottom:1px solid rgba(255,255,255,.45)}
+.levels .lv{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding-top:3px}
+.levels b{display:block;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(1rem,1.5vw,1.25rem);line-height:1.1;margin-bottom:4px}
+.bar-meter{display:flex;gap:4px;margin-top:6px}.bar-meter i{width:22px;height:4px;border-radius:2px;background:rgba(255,255,255,.35)}.bar-meter i.on{background:#fff}
+
+/* ---------- thanks ---------- */
+#thanks .bg{object-position:center}
+#thanks .bg-fade{background:linear-gradient(90deg,rgba(0,0,0,.75),rgba(0,0,0,.2) 60%,rgba(0,0,0,0))}
+.big-mark{width:min(640px,80%);height:auto;display:block}
+.details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.45)}
+@media (max-width:760px){.details{grid-template-columns:1fr}}
+.details dt{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-dark);margin-bottom:6px}
+.details dd{margin:0;font-weight:600}
+
+@media (max-width:899px),(max-height:619px){
+  .bar{background:var(--black);transition:color .3s,background .3s}
+  body[data-tone="coral"] .bar{background:var(--coral)}
+  body[data-tone="light"] .bar{background:var(--white)}
+}
+@media (max-width:600px){
+  .slide{padding-block:calc(60px + env(safe-area-inset-top,0px)) 88px}
+  .bar-right .label{display:none}
+}
+</style>
+</head>
+<body data-tone="dark">
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+<header class="bar">
+  <a href="#title" aria-label="Seeper, back to the start"><img class="wordmark" src="images/seeper-wordmark-small.png" alt="Seeper"></a>
+  <div class="bar-right">
+    <span class="label" id="section-label">How we pitch now</span>
+    <span class="counter" id="counter">01 / 17</span>
+    <button class="btn" id="notes-toggle" aria-pressed="false" aria-controls="notes" title="Speaker notes (N)"><span>Notes</span></button>
+  </div>
+</header>
+
+<main id="deck">
+
+<!-- 01 TITLE -->
+<section class="slide dark" id="title" data-label="How we pitch now" data-tone="dark">
+  <img class="bg" src="images/title.jpg" alt="" aria-hidden="true"><div class="bg-fade" aria-hidden="true"></div>
+  <div class="inner">
+    <span class="side l">November 2026</span><span class="side r">Seeper studio guide</span>
+    <div class="title-wrap">
+      <div class="target">
+        <img src="images/target-frame.png" alt="" aria-hidden="true">
+        <div class="t-copy">
+          <span class="hello">Hello, Seeper</span>
+          <h1 style="margin:0;display:flex;flex-direction:column;align-items:center;gap:4px"><span class="t-thin">How we</span><span class="t-bold">pitch now</span></h1>
+        </div>
+      </div>
+    </div>
+    <p class="title-foot">Brief to live deck with Claude, GitHub and Vercel</p>
+  </div>
+</section>
+
+<!-- 02 AGENDA -->
+<section class="slide light" id="agenda" data-label="Agenda" data-tone="light">
+  <div class="ag-panel">
+    <h2 class="h-l">Today’s<br>agenda</h2>
+    <ol class="ag-list">
+      <li><span class="n">[01]</span><a href="#why">Why webdecks</a><span class="m">2 mins</span></li>
+      <li><span class="n">[02]</span><a href="#workflow">The workflow</a><span class="m">2 mins</span></li>
+      <li><span class="n">[03]</span><a href="#brief">Story and brand</a><span class="m">5 mins</span></li>
+      <li><span class="n">[04]</span><a href="#build">Build, connect, publish</a><span class="m">5 mins</span></li>
+      <li><span class="n">[05]</span><a href="#live">Edit live, work together</a><span class="m">4 mins</span></li>
+      <li><span class="n">[06]</span><a href="#noodle">What’s next: Noodle</a><span class="m">3 mins</span></li>
+      <li><span class="n">[07]</span><a href="#kit">Your prompt kit</a><span class="m">2 mins</span></li>
+    </ol>
+    <span class="tag" style="color:var(--muted-light)">seeper.com</span>
+  </div>
+  <div class="ag-img">
+    <img src="images/clouds.jpg" alt="A lone figure stands before a bright opening in a wall of storm clouds." loading="lazy">
+    <span class="side r">We are Spatial Storytellers</span>
+  </div>
+</section>
+
+<!-- 03 WHY -->
+<section class="slide coral" id="why" data-label="Why webdecks" data-tone="coral">
+  <img class="bg" src="images/coral-sunset.jpg" alt="" aria-hidden="true">
+  <div class="marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="inner">
+    <div class="split-right">
+      <div></div>
+      <div>
+        <span class="tag">Why webdecks</span>
+        <h2 class="h-l">A pitch should feel like a place</h2>
+        <p class="lede">A webdeck is a presentation built as a web page. One link that plays on any screen, updates in real time and carries our brand exactly as it was designed.</p>
+        <p class="lede muted">We design and build places to be. Our decks can do the same.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 SHIFT -->
+<section class="slide dark" id="shift" data-label="The shift" data-tone="dark">
+  <div class="inner">
+    <div class="eyebrow"><span>The shift</span><span class="step-no">↗</span></div>
+    <div class="shift-grid">
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="desk" id="desk" data-mode="before" role="img" aria-label="Before: a scatter of versioned deck files. After: one live link.">
+          <div class="file" style="left:6%;top:10%;transform:rotate(-4deg);--tx:120px;--ty:80px"><span class="ext">PDF</span>Pitch_final.pdf</div>
+          <div class="file" style="left:40%;top:6%;transform:rotate(3deg);--tx:-20px;--ty:100px"><span class="ext">PPTX</span>Pitch_final_v2.pptx</div>
+          <div class="file" style="left:12%;top:32%;transform:rotate(2deg);--tx:110px;--ty:20px"><span class="ext">KEY</span>Pitch_v3 (Lauren edits).key</div>
+          <div class="file" style="left:50%;top:28%;transform:rotate(-3deg);--tx:-90px;--ty:30px"><span class="ext">PDF</span>Pitch_final_v7_FINAL.pdf</div>
+          <div class="file" style="left:4%;top:56%;transform:rotate(-2deg);--tx:140px;--ty:-40px"><span class="ext">ZIP</span>fonts_missing.zip</div>
+          <div class="file" style="left:44%;top:52%;transform:rotate(4deg);--tx:-60px;--ty:-40px"><span class="ext">PDF</span>Pitch_USE_THIS_ONE.pdf</div>
+          <div class="file" style="left:20%;top:76%;transform:rotate(1deg);--tx:60px;--ty:-90px"><span class="ext">MP4</span>demo_v4_compressed.mp4</div>
+          <div class="live-link">
+            <span class="url"><span class="dot" aria-hidden="true"></span>your-pitch.vercel.app</span>
+            <span class="live-sub">One link · always the latest version</span>
+          </div>
+        </div>
+        <div class="seg" role="group" aria-label="Compare" style="align-self:flex-start">
+          <button id="mode-before" aria-pressed="true">Static files</button>
+          <button id="mode-after" aria-pressed="false">Webdeck</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+        <h2 class="h-m" id="shift-head">Versions in inboxes. Fonts that break. Edits that mean re-sending.</h2>
+        <ul class="shift-list" id="shift-list"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 WORKFLOW -->
+<section class="slide light" id="workflow" data-label="The workflow" data-tone="light">
+  <div class="marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="inner">
+    <h2 class="h-l">Eight steps<br>to a live deck</h2>
+    <div class="steps">
+      <a class="step" href="#brief"><span class="k">[01]</span><h3>Story</h3><p>Give Claude the context, or the exact narrative.</p></a>
+      <a class="step" href="#brand"><span class="k">[02]</span><h3>Brand</h3><p>Share the guidelines: type, colour and tone of voice.</p></a>
+      <a class="step" href="#build"><span class="k">[03]</span><h3>Build</h3><p>Ask Claude for a webdeck that answers the brief.</p></a>
+      <a class="step" href="#connect"><span class="k">[04]</span><h3>Connect</h3><p>Link GitHub and Vercel through Claude’s connectors.</p></a>
+      <a class="step" href="#publish"><span class="k">[05]</span><h3>Publish</h3><p>Repo in, live URL out.</p></a>
+      <a class="step" href="#live"><span class="k">[06]</span><h3>Edit live</h3><p>Changes land on the same link in real time.</p></a>
+      <a class="step" href="#together"><span class="k">[07]</span><h3>Collaborate</h3><p>Bring the team into the repo.</p></a>
+      <a class="step soon" href="#noodle"><span class="k">[08]</span><h3>Noodle</h3><p>One shared system that grows with the brand.</p><span class="pill">In the works</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- 06 STEP 01 STORY -->
+<section class="slide light" id="brief" data-label="01 Story" data-tone="light">
+  <div class="inner">
+    <div class="eyebrow"><span><span class="step-no">[01]</span>&nbsp; Story</span><span>Step 1 of 8</span></div>
+    <div class="two">
+      <div class="col">
+        <h2 class="h-l">Give Claude the story</h2>
+        <p class="lede">Start with the project, proposal, pitch or concept. Share the brief, notes, transcripts and facts that matter.</p>
+        <p class="lede muted">Want more control? Break the narrative down slide by slide. You keep the storytelling, Claude does the build.</p>
+        <p class="note">More direction gives you more control. Less direction gives Claude room to surprise you. Both work.</p>
+      </div>
+      <div class="col">
+        <div class="seg" role="group" aria-label="Level of direction" style="align-self:flex-start">
+          <button data-brief="light" aria-pressed="true">Light touch</button>
+          <button data-brief="full" aria-pressed="false">Full control</button>
+        </div>
+        <div class="prompt">
+          <div class="prompt-head"><span id="brief-label">Prompt · context only</span><button class="copy" data-copy="brief-text">Copy</button></div>
+          <pre id="brief-text"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 STEP 02 BRAND -->
+<section class="slide dark" id="brand" data-label="02 Brand" data-tone="dark">
+  <div class="inner">
+    <div class="eyebrow"><span><span class="step-no">[02]</span>&nbsp; Brand</span><span>Step 2 of 8</span></div>
+    <div class="two two-a">
+      <div class="col">
+        <h2 class="h-l">Give Claude the brand</h2>
+        <p class="lede">Attach the guidelines PDF or paste the essentials: fonts, colour values and tone of voice. The more exact you are, the more on-brand the result.</p>
+        <ul class="sources" aria-label="What this deck was given">
+          <li>Brand Guidelines V4</li><li>Copy Style Guide</li><li>Hello Deck template</li>
+        </ul>
+        <p class="note">This deck is the proof. Everything on this slide came straight from those three files.</p>
+      </div>
+      <div class="col" style="gap:22px">
+        <div class="specimen">
+          <div><span class="lab">Display</span><span class="sp-d">Special Gothic</span></div>
+          <div><span class="lab">Body</span><span class="sp-b">Inter. Headings emotive, body copy factual.</span></div>
+          <div><span class="lab">Labels</span><span class="sp-m">[01] IBM PLEX MONO</span></div>
+        </div>
+        <div class="swatches">
+          <div class="sw"><i style="background:#000"></i><b>Eclipse Black</b><span>#000000</span></div>
+          <div class="sw"><i style="background:#222"></i><b>Twilight Black</b><span>#222222</span></div>
+          <div class="sw"><i style="background:#626262"></i><b>Steel Haze</b><span>#626262</span></div>
+          <div class="sw"><i style="background:#C3C3C3"></i><b>Lunar Mist</b><span>#C3C3C3</span></div>
+          <div class="sw"><i style="background:#fff"></i><b>Crystal White</b><span>#FFFFFF</span></div>
+          <div class="sw"><i style="background:#FF4C5E;border-color:#FF4C5E"></i><b>Accent coral</b><span>#FF4C5E</span></div>
+        </div>
+        <ul class="checks">
+          <li>UK English, no Oxford comma, sentence case headings</li>
+          <li>Legibility wins. One idea per page.</li>
+          <li>Seeper with a capital S. Spatial Storytellers keeps its capitals.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 STEP 03 BUILD -->
+<section class="slide coral" id="build" data-label="03 Build" data-tone="coral">
+  <img class="bg" src="images/coral-steps.jpg" alt="" aria-hidden="true">
+  <div class="marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="inner">
+    <div class="split-right split-wide">
+      <div></div>
+      <div>
+        <span class="tag">[03] Build · Step 3 of 8</span>
+        <h2 class="h-l">Ask for the webdeck</h2>
+        <div class="prompt">
+          <div class="prompt-head"><span>Prompt · build</span><button class="copy" data-copy="build-text">Copy</button></div>
+          <pre id="build-text">Using the brief and the Seeper brand guidelines above, design and build a <b>webdeck</b>: a single HTML page with one full-screen slide per idea.
+
+Include keyboard and click navigation, a slide counter, speaker notes (press N) and a layout that works on phones.
+
+Keep headings emotive and body copy factual. Only use claims from the brief.</pre>
+        </div>
+        <ul class="checks">
+          <li>Ask to see it first, then refine slide by slide</li>
+          <li>Ask for one interactive moment where it helps the story</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 STEP 04 CONNECT -->
+<section class="slide light" id="connect" data-label="04 Connect" data-tone="light">
+  <div class="inner">
+    <div class="eyebrow"><span><span class="step-no">[04]</span>&nbsp; Connect</span><span>Step 4 of 8</span></div>
+    <h2 class="h-l">Connect GitHub and Vercel</h2>
+    <div class="cards2">
+      <div class="card">
+        <div class="card-head">
+          <span class="logo-dot" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg></span>
+          <h3 class="h-m">GitHub</h3>
+        </div>
+        <p style="margin:0" class="muted">Where the deck’s code lives, with every version saved.</p>
+        <ol>
+          <li><span>In Claude, open <span class="kbd">Settings → Connectors</span> and connect GitHub.</span></li>
+          <li><span>Create a repository for the deck, or let Claude create one for you.</span></li>
+          <li><span>Give Claude access to that repository.</span></li>
+        </ol>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="logo-dot" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 23 21H1z"/></svg></span>
+          <h3 class="h-m">Vercel</h3>
+        </div>
+        <p style="margin:0" class="muted">Where the deck is hosted, on a link you can share.</p>
+        <ol>
+          <li><span>Connect Vercel in the same <span class="kbd">Connectors</span> panel.</span></li>
+          <li><span>Import the GitHub repository as a new Vercel project.</span></li>
+          <li><span>From then on, every change to the repo redeploys the site.</span></li>
+        </ol>
+      </div>
+    </div>
+    <span class="once">You only set this up once</span>
+  </div>
+</section>
+
+<!-- 10 STEP 05 PUBLISH -->
+<section class="slide dark" id="publish" data-label="05 Publish" data-tone="dark">
+  <div class="marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="inner">
+    <div class="eyebrow"><span><span class="step-no">[05]</span>&nbsp; Publish</span><span>Step 5 of 8</span></div>
+    <h2 class="h-l">Repo in.<br><span class="accent">Live link</span> out.</h2>
+    <div class="pipe">
+      <div class="pipe-line" aria-hidden="true"><span class="pulse"></span></div>
+      <div class="node"><span class="orb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19.1"/></svg></span><h3>Claude</h3><p>Writes the deck from your story and brand</p></div>
+      <div class="node"><span class="orb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 8.5v7M18 11.5c0 3-4 3-9.5 5"/></svg></span><h3>GitHub</h3><p>Stores the code and every change</p></div>
+      <div class="node"><span class="orb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 4 21 20H3z"/></svg></span><h3>Vercel</h3><p>Builds and hosts the site</p></div>
+      <div class="node end"><span class="orb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg></span><h3>Your URL</h3><p>Share by link or QR code, on any screen</p></div>
+    </div>
+    <p class="lede muted">Claude hands you the address. Send it before the meeting, present from it in the room, leave it behind afterwards.</p>
+  </div>
+</section>
+
+<!-- 11 STEP 06 EDIT LIVE -->
+<section class="slide light" id="live" data-label="06 Edit live" data-tone="light">
+  <div class="inner">
+    <div class="eyebrow"><span><span class="step-no">[06]</span>&nbsp; Edit live</span><span>Step 6 of 8</span></div>
+    <div class="two" style="align-items:center">
+      <div class="col">
+        <h2 class="h-l">Change a line. See it live.</h2>
+        <p class="lede">Ask for edits in plain English: “make slide four punchier”, “swap the hero image”, “add the latest figures”. Claude updates the repo and Vercel republishes the same link.</p>
+        <p class="note">Try it. Type a new headline and publish it.</p>
+        <div class="edit-row">
+          <label for="edit-input" class="tag" style="position:absolute;left:-9999px">New headline</label>
+          <input id="edit-input" type="text" maxlength="48" value="Where story becomes place">
+          <button id="edit-go">Publish</button>
+        </div>
+      </div>
+      <div class="col">
+        <div class="browser">
+          <div class="chrome"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span class="addr"><span class="dot" aria-hidden="true"></span>your-pitch.vercel.app</span></div>
+          <div class="mini"><h4 id="mini-h">How we pitch now</h4><span class="ver" id="mini-v">Version 1</span></div>
+        </div>
+        <div class="status" aria-live="polite"><span id="st1">Edit</span><span id="st2">Commit to GitHub</span><span id="st3">Vercel build</span><span id="st4">Live</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12 STEP 07 COLLABORATE -->
+<section class="slide dark" id="together" data-label="07 Collaborate" data-tone="dark">
+  <img class="bg" src="images/circles-mono.jpg" alt="" aria-hidden="true"><div class="bg-fade" aria-hidden="true"></div>
+  <div class="inner" style="justify-content:flex-end">
+    <span class="tag"><span class="step-no">[07]</span>&nbsp; Collaborate · Step 7 of 8</span>
+    <h2 class="h-l">Build it together</h2>
+    <div class="cols3">
+      <div class="c3"><span class="k">[01]</span><h3>Invite</h3><p>Add teammates to the GitHub repository as collaborators. Everyone works from one source.</p></div>
+      <div class="c3"><span class="k">[02]</span><h3>Preview</h3><p>Try ideas on a branch. Vercel gives each one its own preview link to review before it goes live.</p></div>
+      <div class="c3"><span class="k">[03]</span><h3>Comment</h3><p>Leave feedback directly on preview pages, then ask Claude to action it.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 STEP 08 NOODLE -->
+<section class="slide coral" id="noodle" data-label="08 Noodle" data-tone="coral">
+  <img class="bg" src="images/coral-texture.jpg" alt="" aria-hidden="true">
+  <div class="marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="inner">
+    <div class="eyebrow"><span>[08]&nbsp; What’s next</span><span>Step 8 of 8</span></div>
+    <div class="noodle-grid">
+      <div class="col" style="gap:20px">
+        <span class="soon-badge"><i aria-hidden="true"></i>In the works</span>
+        <h2 class="h-xl" style="font-size:clamp(3rem,9vw,8rem)">Noodle</h2>
+        <p class="lede">Noodle cuts out the middle man. We all work from the same designs, templates and updates, and as the brand evolves, Noodle evolves with it.</p>
+        <ul class="benefits">
+          <li><b>One shared source</b><span>Same designs, templates and updates for everyone.</span></li>
+          <li><b>Moves with the brand</b><span>When the brand updates, Noodle updates.</span></li>
+          <li><b>Built together</b><span>We work with it symbiotically to make new things.</span></li>
+          <li><b>Faster for everyone</b><span>Less GitHub know-how needed, so the process is far quicker.</span></li>
+        </ul>
+      </div>
+      <svg class="loop" viewBox="0 0 520 520" role="img" aria-label="A loop: the brand feeds Noodle, Noodle feeds our work, our work feeds back into the brand.">
+        <circle cx="260" cy="260" r="200" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5" stroke-dasharray="4 8"/>
+        <g class="orbit"><circle cx="260" cy="60" r="7" fill="#fff"/><circle cx="433" cy="360" r="5" fill="#fff" opacity=".7"/><circle cx="87" cy="360" r="5" fill="#fff" opacity=".7"/></g>
+        <circle cx="260" cy="260" r="92" fill="#fff"/>
+        <text x="260" y="270" text-anchor="middle" font-size="30" style="fill:#FF4C5E">Noodle</text>
+        <g><circle cx="260" cy="60" r="44" fill="rgba(0,0,0,.25)" stroke="#fff"/><text x="260" y="66" text-anchor="middle" font-size="16">Brand</text></g>
+        <g><circle cx="433" cy="360" r="44" fill="rgba(0,0,0,.25)" stroke="#fff"/><text x="433" y="366" text-anchor="middle" font-size="16">Us</text></g>
+        <g><circle cx="87" cy="360" r="44" fill="rgba(0,0,0,.25)" stroke="#fff"/><text x="87" y="366" text-anchor="middle" font-size="16">New work</text></g>
+        <text class="lbl" x="372" y="190" text-anchor="middle">updates</text>
+        <text class="lbl" x="260" y="440" text-anchor="middle">creates</text>
+        <text class="lbl" x="148" y="190" text-anchor="middle">evolves</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 14 CRAFT -->
+<section class="slide light" id="craft" data-label="Good practice" data-tone="light">
+  <div class="inner">
+    <div class="eyebrow"><span>Good practice</span><span class="step-no">↗</span></div>
+    <h2 class="h-l">What makes a strong webdeck</h2>
+    <div class="rules">
+      <div><span class="k">[01]</span><h3>One idea per slide</h3><p>If a slide needs two headings, it’s two slides.</p></div>
+      <div><span class="k">[02]</span><h3>Feel, then fact</h3><p>The heading moves people. The line underneath says plainly what we do.</p></div>
+      <div><span class="k">[03]</span><h3>Pairs, not just threes</h3><p>Not every list needs three items. Two is often stronger.</p></div>
+      <div><span class="k">[04]</span><h3>Write the notes</h3><p>Ask Claude for speaker notes so anyone can present it.</p></div>
+      <div><span class="k">[05]</span><h3>Check it on a phone</h3><p>Most people open the link on their phone first.</p></div>
+      <div><span class="k">[06]</span><h3>Prove every claim</h3><p>Only use figures we can back up. Check them before it goes live.</p></div>
+    </div>
+    <div class="glyph-band" aria-hidden="true">
+      <div><img src="images/way1.png" alt=""></div><div><img src="images/way2.png" alt=""></div><div><img src="images/way3.png" alt=""></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 FLUENCY -->
+<section class="slide coral" id="fluency" data-label="Fluency" data-tone="coral">
+  <img class="bg" src="images/coral-crowd.jpg" alt="" aria-hidden="true">
+  <div class="marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="inner">
+    <div class="split-right">
+      <div></div>
+      <div>
+        <span class="tag">Getting comfortable</span>
+        <h2 class="h-l">Fluency comes with use</h2>
+        <p class="lede">This way of working asks for more fluency with Claude, GitHub and Vercel. It’s worth it, and we’ll learn it together.</p>
+        <ul class="levels">
+          <li><span class="lv">Start</span><span><b>Ask Claude for a webdeck</b>Give it a story and the brand. Review it in the chat.<span class="bar-meter" aria-hidden="true"><i class="on"></i><i></i><i></i></span></span></li>
+          <li><span class="lv">Next</span><span><b>Keep it in GitHub</b>Connect GitHub and let Claude save the deck to a repo.<span class="bar-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></span></span></li>
+          <li><span class="lv">Then</span><span><b>Publish and share</b>Go live on Vercel and invite the team in.<span class="bar-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 PROMPT KIT -->
+<section class="slide dark" id="kit" data-label="Prompt kit" data-tone="dark">
+  <div class="inner">
+    <div class="eyebrow"><span>Your prompt kit</span><span class="step-no">↗</span></div>
+    <div class="two two-b" style="align-items:center">
+      <div class="col">
+        <h2 class="h-l">Copy, fill, go</h2>
+        <p class="lede">One prompt that covers steps one to five. Fill in the brackets, attach the brand guidelines and send.</p>
+        <p class="note">Tip: once it’s live, keep the same conversation going for edits so Claude has the full context.</p>
+      </div>
+      <div class="prompt">
+        <div class="prompt-head"><span>Prompt · full workflow</span><button class="copy" data-copy="kit-text">Copy</button></div>
+        <pre id="kit-text"><b>CONTEXT</b>
+I’m preparing a [pitch / proposal / concept] for [audience].
+The project: [what it is, in two or three lines].
+What we want them to feel: [ ]. What we want them to do: [ ].
+Key facts we can prove: [ ]. Attached: [brief, notes, images].
+
+<b>NARRATIVE</b> (optional, for more control)
+Slide 1: [heading] · [one line] · [visual idea]
+Slide 2: …
+
+<b>BRAND</b>
+Use the attached Seeper brand guidelines and Copy Style Guide.
+Display: Special Gothic Expanded One. Body: Inter. Labels: IBM Plex Mono.
+Black, white and accent coral #FF4C5E. UK English. Headings emotive, body factual.
+
+<b>BUILD</b>
+Design and build a webdeck: a single HTML page, one full-screen slide per idea,
+keyboard and click navigation, speaker notes and a phone-friendly layout.
+
+<b>PUBLISH</b>
+Save it to a new GitHub repo called [deck-name], deploy it on Vercel
+and send me the live URL.</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 THANKS -->
+<section class="slide dark" id="thanks" data-label="Thank you" data-tone="dark">
+  <img class="bg" src="images/beam.jpg" alt="" aria-hidden="true"><div class="bg-fade" aria-hidden="true"></div>
+  <div class="inner">
+    <span class="tag">Thank you</span>
+    <h2 class="h-xl">Let’s talk</h2>
+    <p class="lede">Questions, ideas or a pitch you want to try this on? Bring it, and we’ll build it together.</p>
+    <p class="lede muted">This deck was made with exactly this workflow.</p>
+    <dl class="details">
+      <div><dt>Presented by</dt><dd>Caitríona McAllister</dd></div>
+      <div><dt>We are</dt><dd>Spatial Storytellers</dd></div>
+      <div><dt>Website</dt><dd><a href="https://seeper.com" target="_blank" rel="noopener">seeper.com</a></dd></div>
+    </dl>
+  </div>
+</section>
+
+</main>
+
+<nav class="pager" aria-label="Slides">
+  <button id="prev" aria-label="Previous slide">↑</button>
+  <button id="next" aria-label="Next slide">↓</button>
+</nav>
+
+<aside class="notes" id="notes" hidden aria-live="polite">
+  <h2 id="notes-title">Speaker notes</h2>
+  <div id="notes-body"></div>
+  <p class="hint">N toggles notes · ← → or ↑ ↓ to move</p>
+</aside>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length;
+  const pad=n=>String(n).padStart(2,'0');
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- speaker notes ---------- */
+  const NOTES={
+    title:["Today is about how we pitch now: taking a brief all the way to a live, on-brand deck with Claude, GitHub and Vercel.","By the end you’ll have a prompt kit you can use on your next pitch."],
+    agenda:["Seven short sections. Why we’re doing this, the workflow step by step, what’s coming next with Noodle, then the prompt kit."],
+    why:["A webdeck is just a presentation built as a web page.","One link that works on any screen, always shows the latest version and carries our brand exactly as designed. We design and build places to be, and our decks can feel the same."],
+    shift:["(Toggle Static files / Webdeck.) This is what most pitch folders look like today: versions in inboxes, missing fonts, ‘USE THIS ONE’.","Switch to webdeck: one link, always the latest version. Edits go live without re-sending anything."],
+    workflow:["Eight steps. One to three happen in Claude: story, brand, build.","Four and five connect it to GitHub and Vercel and give you a URL. Six and seven are about editing live and working together. Eight is Noodle, which is in the works."],
+    brief:["Step one: give Claude the story. Context, brief, notes, transcripts, the facts that matter.","If you want more control, break down the narrative slide by slide. You keep the storytelling; Claude does the build.","(Toggle Light touch / Full control to show both prompts.)"],
+    brand:["Step two: give Claude the brand. Attach the guidelines PDF or paste fonts, colour values and tone of voice.","Everything on this slide came from three files: Brand Guidelines V4, the Copy Style Guide and the Hello Deck template."],
+    build:["Step three: ask for the webdeck. Be specific about the format: one HTML page, full-screen slides, navigation, speaker notes, phone-friendly.","Look at the first version, then refine slide by slide."],
+    connect:["Step four is a one-off setup. In Claude, Settings, Connectors: connect GitHub and Vercel.","GitHub holds the code and every version. Vercel hosts it on a link and redeploys whenever the repo changes."],
+    publish:["Step five: Claude writes the deck, GitHub stores it, Vercel builds it and you get a URL.","Send it before the meeting, present from it in the room and leave it behind afterwards."],
+    live:["Step six: edits happen in real time. Ask Claude in plain English and the same link updates.","(Type a headline and press Publish to show the flow: edit, commit, build, live.)"],
+    together:["Step seven: invite teammates into the GitHub repo. Use branches and Vercel preview links to try ideas before they go live, and leave comments directly on previews."],
+    noodle:["Step eight is in the works: Noodle.","Noodle cuts out the middle man. We’ll all be using the same designs, templates and updates. As the brand updates, Noodle updates, and we work with it symbiotically to make new things.","It also helps anyone who’s less comfortable with GitHub, because the whole process gets much faster."],
+    craft:["A few rules from our Copy Style Guide that make a strong webdeck: one idea per slide, feel then fact, pairs as well as threes, write the notes, check it on a phone and only claim what we can prove."],
+    fluency:["This does ask for more fluency with Claude, GitHub and Vercel. I’d encourage everyone to get comfortable with it.","Start small: ask Claude for a webdeck and review it in chat. Next, keep it in GitHub. Then publish and invite the team."],
+    kit:["Here’s the whole workflow in one prompt. Fill in the brackets, attach the brand guidelines and send.","Keep the same conversation going for edits so Claude has the full context."],
+    thanks:["Thank you. Questions, ideas or a pitch you want to try this on? Come and find me and we’ll build it together.","And yes, this deck was built with exactly this workflow."]
+  };
+
+  const counter=document.getElementById('counter');
+  const label=document.getElementById('section-label');
+  const progress=document.getElementById('progress');
+  const notes=document.getElementById('notes');
+  const notesBody=document.getElementById('notes-body');
+  const notesTitle=document.getElementById('notes-title');
+  const notesBtn=document.getElementById('notes-toggle');
+  const prevBtn=document.getElementById('prev'),nextBtn=document.getElementById('next');
+  let current=0;
+
+  function setCurrent(i){
+    current=i;const s=slides[i];
+    counter.textContent=pad(i+1)+' / '+pad(total);
+    label.textContent=s.dataset.label;
+    document.body.dataset.tone=s.dataset.tone;
+    progress.style.width=((i+1)/total*100)+'%';
+    prevBtn.disabled=i===0;nextBtn.disabled=i===total-1;
+    notesTitle.textContent='Speaker notes · '+pad(i+1)+' '+s.dataset.label;
+    notesBody.innerHTML='';
+    (NOTES[s.id]||[]).forEach(t=>{const p=document.createElement('p');p.textContent=t;notesBody.appendChild(p)});
+    try{history.replaceState(null,'','#'+s.id)}catch(e){}
+  }
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>=.5){setCurrent(slides.indexOf(e.target))}});
+  },{threshold:[.5]});
+  slides.forEach(s=>io.observe(s));
+
+  function go(i){i=Math.max(0,Math.min(total-1,i));slides[i].scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'})}
+  prevBtn.onclick=()=>go(current-1);nextBtn.onclick=()=>go(current+1);
+  function toggleNotes(){notes.hidden=!notes.hidden;notesBtn.setAttribute('aria-pressed',String(!notes.hidden))}
+  notesBtn.onclick=toggleNotes;
+  document.addEventListener('keydown',e=>{
+    if(e.target.closest('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey)return;
+    const k=e.key;
+    if(['ArrowDown','ArrowRight','PageDown',' '].includes(k)){e.preventDefault();go(current+1)}
+    else if(['ArrowUp','ArrowLeft','PageUp'].includes(k)){e.preventDefault();go(current-1)}
+    else if(k==='Home'){e.preventDefault();go(0)}
+    else if(k==='End'){e.preventDefault();go(total-1)}
+    else if(k==='n'||k==='N'){toggleNotes()}
+  });
+  function fromHash(){const id=location.hash.slice(1);const i=slides.findIndex(s=>s.id===id);if(i>=0){slides[i].scrollIntoView({block:'start'});setCurrent(i)}}
+  window.addEventListener('hashchange',fromHash);
+  setCurrent(0);fromHash();
+
+  /* ---------- shift: static files vs webdeck ---------- */
+  const SHIFT={
+    before:{head:'Versions in inboxes. Fonts that break. Edits that mean re-sending.',items:['A new file for every change','Fonts and layouts break on other machines','Video and interaction squeezed into a PDF','Nobody is sure which version is the latest']},
+    after:{head:'One link. Always the latest. Our brand, exactly as designed.',items:['Edits go live on the same link','Real fonts, colours and motion on every screen','Interactive moments that help tell the story','One source of truth the whole team works from']}
+  };
+  const desk=document.getElementById('desk'),shiftHead=document.getElementById('shift-head'),shiftList=document.getElementById('shift-list');
+  const bB=document.getElementById('mode-before'),bA=document.getElementById('mode-after');
+  function setShift(m){
+    desk.dataset.mode=m;bB.setAttribute('aria-pressed',String(m==='before'));bA.setAttribute('aria-pressed',String(m==='after'));
+    shiftHead.textContent=SHIFT[m].head;shiftList.innerHTML='';
+    SHIFT[m].items.forEach((t,i)=>{const li=document.createElement('li');li.innerHTML='<span class="n">'+pad(i+1)+'</span><span></span>';li.lastChild.textContent=t;shiftList.appendChild(li)});
+  }
+  bB.onclick=()=>setShift('before');bA.onclick=()=>setShift('after');setShift('before');
+
+  /* ---------- brief prompts ---------- */
+  const BRIEF={
+    light:{label:'Prompt · context only',text:'Here’s the context for a [pitch / proposal / concept] to [client or audience].\n\nThe project: [what it is, in two or three lines]\nThe audience: [who will see it and what they care about]\nWhat we want them to feel: [ ]\nWhat we want them to do: [ ]\nKey facts and figures we can prove: [ ]\n\nI’ve attached the brief, our notes and the meeting transcript.\nShape this into a clear, persuasive story.'},
+    full:{label:'Prompt · exact narrative',text:'Use this exact narrative. One slide per line.\n\n01  Title: [project name] · [one-line promise]\n02  The moment: [the human insight we open with]\n03  The problem: [what’s broken today]\n04  The idea: [our answer, in one sentence]\n05  How it works: [three steps, or two]\n06  Proof: [figures or past work we can stand behind]\n07  The ask: [what we want them to agree to]\n08  Close: [the feeling we leave them with]\n\nFor each slide: heading, one line of body, speaker notes and a visual idea.'}
+  };
+  const briefText=document.getElementById('brief-text'),briefLabel=document.getElementById('brief-label');
+  const briefBtns=[...document.querySelectorAll('[data-brief]')];
+  function setBrief(k){briefText.textContent=BRIEF[k].text;briefLabel.textContent=BRIEF[k].label;briefBtns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.brief===k)))}
+  briefBtns.forEach(b=>b.onclick=()=>setBrief(b.dataset.brief));setBrief('light');
+
+  /* ---------- copy buttons ---------- */
+  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{
+    const el=document.getElementById(b.dataset.copy),txt=el.textContent.trim();
+    const done=()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1600)};
+    const fallback=()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Selected'};
+    try{navigator.clipboard.writeText(txt).then(done,fallback)}catch(e){fallback()}
+  }));
+
+  /* ---------- live edit demo ---------- */
+  const input=document.getElementById('edit-input'),goBtn=document.getElementById('edit-go');
+  const miniH=document.getElementById('mini-h'),miniV=document.getElementById('mini-v');
+  const st=[1,2,3,4].map(n=>document.getElementById('st'+n));
+  let ver=1;
+  function publish(){
+    const txt=input.value.trim();if(!txt)return;
+    goBtn.disabled=true;st.forEach(s=>s.className='');
+    const steps=reduce?[0,0,0,0]:[0,600,1300,2300];
+    steps.forEach((t,i)=>setTimeout(()=>{
+      st.forEach((s,j)=>{s.className=j<i?'done':(j===i?'on':'')});
+      if(i===3){st[3].className='done';miniH.style.opacity=0;setTimeout(()=>{miniH.textContent=txt;ver++;miniV.textContent='Version '+ver;miniH.style.opacity=1;goBtn.disabled=false},reduce?0:250)}
+    },t));
+  }
+  goBtn.onclick=publish;
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')publish()});
+})();
+</script>
+</body>
+</html>
