@@ -166,7 +166,25 @@ body[data-tone="light"] .pager button{color:var(--black)}
 @media (max-width:860px){#agenda{flex-direction:column}.ag-panel{flex:none;border-right:0}.ag-img{min-height:38vh;flex:none}}
 
 /* ---------- 3 why (coral photo) ---------- */
-#why .bg{object-position:left center}
+#why{background:#F94B5C}
+.why-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);grid-template-areas:"head orb" "copy orb";gap:clamp(20px,3vw,48px) clamp(24px,4vw,64px);align-items:center}
+.why-head{grid-area:head;display:flex;flex-direction:column;gap:18px;align-self:end}
+.why-head .h-xl{font-size:clamp(2.6rem,7vw,6.6rem);line-height:.92}
+.why-copy{grid-area:copy;align-self:start}
+.why-orb{grid-area:orb;position:relative;width:100%;max-width:520px;aspect-ratio:1;justify-self:end}
+.why-orb .photo{position:absolute;inset:13%;border-radius:50%;overflow:hidden;background:#000}
+.why-orb .photo img{width:100%;height:100%;object-fit:cover;object-position:60% center;display:block}
+.why-orb .frame{position:absolute;inset:0;width:100%;height:100%}
+@media (prefers-reduced-motion:no-preference){.why-orb .frame{animation:slowspin 60s linear infinite}@keyframes slowspin{to{transform:rotate(360deg)}}}
+.why-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,28px);margin:0;padding:0;list-style:none}
+.why-points li{display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,.55);min-width:0}
+.why-points .k{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase}
+.why-points span:last-child{font-size:.98rem;line-height:1.45}
+@media (max-width:860px){
+  .why-grid{grid-template-columns:1fr;grid-template-areas:"head" "orb" "copy"}
+  .why-orb{max-width:300px;justify-self:center}
+}
+@media (max-width:560px){.why-points{grid-template-columns:1fr}}
 .split-right{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center}
 .split-right>div:last-child{display:flex;flex-direction:column;gap:22px}
 .split-wide{grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr)}
@@ -413,16 +431,24 @@ body[data-tone="light"] .pager button{color:var(--black)}
 
 <!-- 03 WHY -->
 <section class="slide coral" id="why" data-label="Why webdecks" data-tone="coral">
-  <img class="bg" src="images/coral-sunset.jpg" alt="" aria-hidden="true">
   <div class="marks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="inner">
-    <div class="split-right">
-      <div></div>
-      <div>
-        <span class="tag">Why webdecks</span>
-        <h2 class="h-l">A pitch should feel like a place</h2>
-        <p class="lede">A webdeck is a presentation built as a web page. One link that plays on any screen, updates in real time and carries our brand exactly as it was designed.</p>
-        <p class="lede muted">We design and build places to be. Our decks can do the same.</p>
+    <div class="eyebrow"><span>Why webdecks</span><span>↗</span></div>
+    <div class="why-grid">
+      <div class="why-head">
+        <h2 class="h-xl">A pitch should feel like a place</h2>
+      </div>
+      <div class="why-orb">
+        <div class="photo"><img src="images/title.jpg" alt="People gather in a vast room washed with purple and pink light." loading="lazy"></div>
+        <img class="frame" src="images/target-frame.png" alt="" aria-hidden="true">
+      </div>
+      <div class="why-copy" style="display:flex;flex-direction:column;gap:22px">
+        <p class="lede">A webdeck is a presentation built as a web page. We design and build places to be. Our decks can do the same.</p>
+        <ul class="why-points">
+          <li><span class="k">One link</span><span>Send it before, present from it, leave it behind.</span></li>
+          <li><span class="k">Any screen</span><span>Laptop, phone or the big screen in the room.</span></li>
+          <li><span class="k">On brand</span><span>Real fonts, colour and motion, exactly as designed.</span></li>
+        </ul>
       </div>
     </div>
   </div>
